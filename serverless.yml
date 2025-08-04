@@ -169,11 +169,23 @@ resources:
       DeletionPolicy: Retain
       Properties:
         LifecycleConfiguration:
-          Rules:
-            - AbortIncompleteMultipartUpload:
-                DaysAfterInitiation: 1
-              Id: DeleteIncompleteMultipartUploads
-              Status: Enabled
+          Fn::If:
+            - IsProd
+            - Rules:
+              - Id: TransitionNoncurrentToIntelligentTiering
+                Status: Enabled
+                Transitions:
+                  - Days: 30 # Adjust based on real usage
+                    StorageClass: INTELLIGENT_TIERING
+              - AbortIncompleteMultipartUpload:
+                  DaysAfterInitiation: 1
+                Id: DeleteIncompleteMultipartUploads
+                Status: Enabled
+            - Rules:
+              - AbortIncompleteMultipartUpload:
+                  DaysAfterInitiation: 1
+                Id: DeleteIncompleteMultipartUploads
+                Status: Enabled
     LockTable:
       Type: AWS::DynamoDB::Table
       DeletionPolicy: Retain
@@ -217,3 +229,9 @@ resources:
     CustomDashresourceDashexistingDashs3LambdaFunction:
       Properties:
         Runtime: nodejs20.x
+  Conditions:
+    IsProd:
+      Fn::Equals: 
+        - ${opt:stage}
+        - prod
+
